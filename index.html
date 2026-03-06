@@ -108,10 +108,13 @@
         },
         mothersRoom: {
           name: "母の部屋",
-          text: "特異点。風が吹かない。ベランダの方を見ると、言葉にできない嫌な感じがする。",
+          text: "特異点。風が吹かない。真空パックされたような、当時の空気が漂っている。",
           isWindy: false,
           hasShadow: false,
-          options: [{ text: "廊下へ戻る", next: "hallway" }],
+          options: [
+            { text: "廊下へ戻る", next: "hallway" },
+            { text: "ベランダの窓に近づく", next: "veranda" }, // ←追加
+          ],
         },
         lookAtWindow: {
           name: "庭（自分の部屋の下）",
@@ -122,6 +125,13 @@
             { text: "目をそらして玄関へ向かう", next: "hallway" },
             { text: "そのまま外へ逃げる", next: "outside" },
           ],
+        },
+        veranda: {
+          name: "母の部屋のベランダ",
+          text: "外に繋がっているはずなのに、開放感がない。物理的な風通しとは無関係な、固有の不快指数がここには設定されているようだ。…長く居るべきではない。",
+          isWindy: false,
+          hasShadow: false,
+          options: [{ text: "部屋の中へ引き返す", next: "mothersRoom" }],
         },
       };
 
@@ -152,6 +162,15 @@
           btn.onclick = () => updateScene(opt.next);
           choiceContainer.appendChild(btn);
         });
+        // updateScene関数の中、下の方にこれを追加
+        const container = document.getElementById("game-container");
+        if (id === "veranda") {
+          container.style.borderColor = "#ff4444"; // 枠を赤く
+          container.style.boxShadow = "0 0 20px rgba(255, 0, 0, 0.2)"; // 赤い光
+        } else {
+          container.style.borderColor = "#444"; // 通常の枠
+          container.style.boxShadow = "none";
+        }
       }
 
       // 初期起動
