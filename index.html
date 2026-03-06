@@ -83,7 +83,10 @@
           text: "建物を外から眺めている。昼の光が降り注いでいる。",
           isWindy: true,
           hasShadow: true,
-          options: [{ text: "家の中に入る", next: "hallway" }],
+          options: [
+            { text: "家の中に入る", next: "hallway" },
+            { text: "自分の部屋の窓を見上げる", next: "lookAtWindow" }, // ←追加
+          ],
         },
         hallway: {
           name: "廊下",
@@ -109,6 +112,16 @@
           isWindy: false,
           hasShadow: false,
           options: [{ text: "廊下へ戻る", next: "hallway" }],
+        },
+        lookAtWindow: {
+          name: "庭（自分の部屋の下）",
+          text: "窓の中に、こちらを覗く人影がある。…あれは、小さな頃の自分だ。家の中にいる時はあんなにうずくまっていたのに。",
+          isWindy: true,
+          hasShadow: false,
+          options: [
+            { text: "目をそらして玄関へ向かう", next: "hallway" },
+            { text: "そのまま外へ逃げる", next: "outside" },
+          ],
         },
       };
 
