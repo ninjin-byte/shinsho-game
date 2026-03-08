@@ -2,7 +2,7 @@
 <html lang="ja">
   <head>
     <meta charset="UTF-8" />
-    <title>心象風景探索レジストリ v1.0</title>
+    <title>心象風景探索レジストリ v1.5</title>
     <style>
       body {
         background: #111;
@@ -21,12 +21,14 @@
         border: 1px solid #444;
         background: #222;
         border-radius: 8px;
+        transition: 0.5s;
       }
       #scene-text {
         min-height: 100px;
         line-height: 1.6;
         margin-bottom: 20px;
         font-size: 1.1em;
+        white-space: pre-wrap;
       }
       .status {
         font-size: 0.8em;
@@ -76,141 +78,139 @@
     </div>
 
     <script>
-        let worldState = {
-          time: "daytime", // "daytime" または "evening"
-          isSelfRecalled: false, // 自分を回収したか
-          mirrorClarity: "cloudy", // 鏡の鮮明度（black -> cloudy -> clear）
-        };
-        // レジストリ定義
-        const registry = {
-      entrance: {
+      let worldState = {
+        time: "daytime",
+        isSelfRecalled: false,
+        mirrorClarity: "cloudy",
+      };
+
+      const registry = {
+        outside: {
+          name: "家の外（安全圏）",
+          text: "夕方の赤みがかった空の下、遠くで寺の鐘が鳴っている。家の外にいれば、中の住人は追ってこれない。",
+          isWindy: true,
+          hasShadow: true,
+          options: [
+            { text: "玄関から入る", next: "entrance" },
+            { text: "自分の部屋の窓を見上げる", next: "lookAtWindow" },
+          ],
+        },
+        entrance: {
           name: "玄関",
           text: "たぬきの置物がこちらを見ている。噛みつこうとする敵意と、動かない置物としての静寂がダブって見える。",
           isWindy: true,
           options: [
-              { text: "無視して廊下へ（スルー）", next: "hallway" },
-              { text: "たぬきを観察する", next: "tanukiObservation" }
-          ]
-      },
-      washstand: {
+            { text: "無視して廊下へ（スルー）", next: "hallway" },
+            { text: "外に出る", next: "outside" },
+          ],
+        },
+        hallway: {
+          name: "廊下",
+          text: "全体的に風通しが良い。光が通り抜けていくのを感じる。",
+          isWindy: true,
+          options: [
+            { text: "洗面台の鏡を見る", next: "washstand" },
+            { text: "自分の部屋に入る", next: "myRoom" },
+            { text: "母の部屋に入る", next: "mothersRoom" },
+            { text: "玄関へ戻る", next: "entrance" },
+          ],
+        },
+        washstand: {
           name: "洗面台",
           text: "鏡はグレーに濁り、自分のシルエットがうっすらとしか映らない。覗き込むほど、自分の内側に意識が沈んでいく。",
           isWindy: true,
+          options: [{ text: "鏡から目をそらす", next: "hallway" }],
+        },
+        myRoom: {
+          name: "自分の部屋",
+          text: "風が止まっている。真空パックされた記憶の部屋。後ろ向きでうずくまっている「自分」がいる。",
+          isWindy: false,
           options: [
-              { text: "鏡から目をそらす", next: "hallway" }
-          ]
-      },
-      outside: {
-          name: "家の外（安全圏）",
-          text: "夕方の赤みがかった空の下、遠くで寺の鐘が鳴っている。家の外にいれば、中の住人は追ってこれない。",
+            { text: "廊下へ戻る", next: "hallway" },
+            { text: "窓を無理やりこじ開ける", next: "windExperiment" },
+          ],
+        },
+        mothersRoom: {
+          name: "母の部屋",
+          text: "特異点。風が吹かない。真空パックされたような、当時の空気が漂っている。",
+          isWindy: false,
+          options: [
+            { text: "廊下へ戻る", next: "hallway" },
+            { text: "ベランダの窓に近づく", next: "veranda" },
+          ],
+        },
+        lookAtWindow: {
+          name: "庭（自分の部屋の下）",
+          text: "窓の中に、こちらを覗く人影がある。…あれは、小さな頃の自分だ。家の中にいる時はあんなにうずくまっていたのに。",
+          isWindy: true,
+          hasShadow: false,
+          options: [
+            { text: "玄関へ向かう", next: "entrance" },
+            { text: "そのまま外へ戻る", next: "outside" },
+          ],
+        },
+        veranda: {
+          name: "母の部屋のベランダ",
+          text: "外に繋がっているはずなのに、開放感がない。物理的な風通しとは無関係な、固有の不快指数がここには設定されているようだ。",
+          isWindy: false,
+          options: [{ text: "部屋の中へ引き返す", next: "mothersRoom" }],
+        },
+        windExperiment: {
+          name: "自分の部屋（実験中）",
+          text: "…風が流れ込んできた。停滞していた空気がかき混ぜられ、『うずくまっていた自分』の形が少し崩れた気がする。",
           isWindy: true,
           options: [
-              { text: "玄関から入る", next: "entrance" },
-              { text: "自分の部屋の窓を見上げる", next: "windowCheck" }
-          ]
-      }
-      // ...他の部屋（母・祖母・自分）も同様に詳細化
-          hallway: {
-            name: "廊下",
-            text: "全体的に風通しが良い。光が通り抜けていくのを感じる。",
-            isWindy: true,
-            hasShadow: false,
-            options: [
-              { text: "自分の部屋に入る", next: "myRoom" },
-              { text: "母の部屋に入る", next: "mothersRoom" },
-              { text: "外に出る", next: "outside" },
-            ],
-          },
-          myRoom: {
-            name: "自分の部屋",
-            text: "風が止まっている。真空パックされた記憶の部屋。",
-            isWindy: false,
-            options: [
-              { text: "廊下へ戻る", next: "hallway" },
-              { text: "窓を無理やりこじ開ける", next: "windExperiment" }, // ←実験開始！
-            ],
-          },
-          mothersRoom: {
-            name: "母の部屋",
-            text: "特異点。風が吹かない。真空パックされたような、当時の空気が漂っている。",
-            isWindy: false,
-            hasShadow: false,
-            options: [
-              { text: "廊下へ戻る", next: "hallway" },
-              { text: "ベランダの窓に近づく", next: "veranda" }, // ←追加
-            ],
-          },
-          lookAtWindow: {
-            name: "庭（自分の部屋の下）",
-            text: "窓の中に、こちらを覗く人影がある。…あれは、小さな頃の自分だ。家の中にいる時はあんなにうずくまっていたのに。",
-            isWindy: true,
-            hasShadow: false,
-            options: [
-              { text: "目をそらして玄関へ向かう", next: "hallway" },
-              { text: "そのまま外へ逃げる", next: "outside" },
-            ],
-          },
-          veranda: {
-            name: "母の部屋のベランダ",
-            text: "外に繋がっているはずなのに、開放感がない。物理的な風通しとは無関係な、固有の不快指数がここには設定されているようだ。…長く居るべきではない。",
-            isWindy: false,
-            hasShadow: false,
-            options: [{ text: "部屋の中へ引き返す", next: "mothersRoom" }],
-          },
-          windExperiment: {
-            name: "自分の部屋（実験中）",
-            text: "…風が流れ込んできた。停滞していた空気がかき混ぜられ、『うずくまっていた自分』の形が少し崩れた気がする。",
-            isWindy: true, // ここで風が吹く！
-            options: [
-              { text: "窓を閉める", next: "myRoom" },
-              { text: "開けたまま廊下へ出る", next: "hallway" },
-            ],
-          },
-        };
+            { text: "窓を閉める", next: "myRoom" },
+            { text: "開けたまま廊下へ出る", next: "hallway" },
+          ],
+        },
+      };
 
-        function updateScene(id) {
-          const scene = registry[id];
+      function updateScene(id) {
+        const scene = registry[id];
+        if (!scene) return;
 
-          // テキスト更新
-          document.getElementById("location-name").innerText = scene.name;
-          document.getElementById("scene-text").innerText = scene.text;
+        // テキスト更新
+        document.getElementById("location-name").innerText = scene.name;
+        document.getElementById("scene-text").innerText = scene.text;
 
-          // 風の状態
-          const windSpan = document.getElementById("wind-status");
-          windSpan.innerText = scene.isWindy ? "風通し良好" : "無風（隔離）";
-          windSpan.className = scene.isWindy ? "windy" : "still";
+        // 風の状態
+        const windSpan = document.getElementById("wind-status");
+        windSpan.innerText = scene.isWindy ? "風通し良好" : "無風（隔離）";
+        windSpan.className = scene.isWindy ? "windy" : "still";
 
-          // 人影の観測ロジック
-          const alert = document.getElementById("shadow-alert");
-          alert.innerText = scene.hasShadow
-            ? "！ 窓からこちらを覗く人影がある。"
-            : "";
+        // 人影の観測ロジック
+        const alert = document.getElementById("shadow-alert");
+        alert.innerText = scene.hasShadow
+          ? "！ 窓からこちらを覗く人影がある。"
+          : "";
 
-          // 選択肢の生成
-          const choiceContainer = document.getElementById("choices");
-          choiceContainer.innerHTML = "";
-          scene.options.forEach((opt) => {
-            const btn = document.createElement("button");
-            btn.innerText = opt.text;
-            btn.onclick = () => updateScene(opt.next);
-            choiceContainer.appendChild(btn);
-          });
-          // さっきの色のコードをこう書き換えます
-          const container = document.getElementById("game-container");
-          if (id === "veranda") {
-            container.style.borderColor = "#ff4444";
-            container.style.boxShadow = "0 0 20px rgba(255, 0, 0, 0.2)";
-          } else if (id === "windExperiment") {
-            container.style.borderColor = "#88ccff"; // 風の青
-            container.style.boxShadow = "0 0 20px rgba(136, 204, 255, 0.4)"; // 風のゆらぎ
-          } else {
-            container.style.borderColor = "#444";
-            container.style.boxShadow = "none";
-          }
+        // 選択肢の生成
+        const choiceContainer = document.getElementById("choices");
+        choiceContainer.innerHTML = "";
+        scene.options.forEach((opt) => {
+          const btn = document.createElement("button");
+          btn.innerText = opt.text;
+          btn.onclick = () => updateScene(opt.next);
+          choiceContainer.appendChild(btn);
+        });
+
+        // 演出
+        const container = document.getElementById("game-container");
+        if (id === "veranda") {
+          container.style.borderColor = "#ff4444";
+          container.style.boxShadow = "0 0 20px rgba(255, 0, 0, 0.2)";
+        } else if (id === "windExperiment") {
+          container.style.borderColor = "#88ccff";
+          container.style.boxShadow = "0 0 20px rgba(136, 204, 255, 0.4)";
+        } else {
+          container.style.borderColor = "#444";
+          container.style.boxShadow = "none";
         }
+      }
 
-        // 初期起動
-        updateScene("outside");
+      // 初期起動
+      updateScene("outside");
     </script>
   </body>
 </html>
