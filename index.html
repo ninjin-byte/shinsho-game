@@ -79,7 +79,7 @@
 
     <script>
       let worldState = {
-        time: "daytime",
+        time: "daytime", // "daytime" か "evening"
         isSelfRecalled: false,
         mirrorClarity: "cloudy",
       };
@@ -87,7 +87,9 @@
       const registry = {
         outside: {
           name: "家の外（安全圏）",
-          text: "夕方の赤みがかった空の下、遠くで寺の鐘が鳴っている。家の外にいれば、中の住人は追ってこれない。",
+          dayText: "昼の光が降り注いでいる。建物は静かだ。",
+          eveningText:
+            "赤みがかった黒い空。遠くで寺の鐘が鳴り、言い知れぬ不安が込み上げる。",
           isWindy: true,
           hasShadow: true,
           options: [
@@ -97,7 +99,9 @@
         },
         entrance: {
           name: "玄関",
-          text: "たぬきの置物がこちらを見ている。噛みつこうとする敵意と、動かない置物としての静寂がダブって見える。",
+          dayText: "たぬきの置物が静止している。",
+          eveningText:
+            "たぬきの置物が噛みつこうとする敵意を見せている。静寂がダブって見える。",
           isWindy: true,
           options: [
             { text: "無視して廊下へ（スルー）", next: "hallway" },
@@ -106,7 +110,9 @@
         },
         hallway: {
           name: "廊下",
-          text: "全体的に風通しが良い。光が通り抜けていくのを感じる。",
+          dayText: "光が通り抜けていくのを感じる。風通しが良い。",
+          eveningText:
+            "影が長く伸びている。光の通り道が、今は闇の通り道になっている。",
           isWindy: true,
           options: [
             { text: "洗面台の鏡を見る", next: "washstand" },
@@ -117,13 +123,18 @@
         },
         washstand: {
           name: "洗面台",
-          text: "鏡はグレーに濁り、自分のシルエットがうっすらとしか映らない。覗き込むほど、自分の内側に意識が沈んでいく。",
+          dayText: "鏡はグレーに濁り、シルエットがうっすら映る程度だ。",
+          eveningText:
+            "鏡面はほぼ黒い。覗き込むほど、思考の深淵に引きずり込まれそうだ。",
           isWindy: true,
           options: [{ text: "鏡から目をそらす", next: "hallway" }],
         },
         myRoom: {
           name: "自分の部屋",
-          text: "風が止まっている。真空パックされた記憶の部屋。後ろ向きでうずくまっている「自分」がいる。",
+          dayText:
+            "風が止まっている。後ろ向きでうずくまっている「自分」がいる。",
+          eveningText:
+            "無風の闇。モザイク状の「自分」の輪郭が、夕闇に溶けて混ざり合っている。",
           isWindy: false,
           options: [
             { text: "廊下へ戻る", next: "hallway" },
@@ -132,7 +143,9 @@
         },
         mothersRoom: {
           name: "母の部屋",
-          text: "特異点。風が吹かない。真空パックされたような、当時の空気が漂っている。",
+          dayText: "特異点。風が吹かない。当時の空気が保存されている。",
+          eveningText:
+            "不快指数の極致。背後で何かが動いたような気がしたが、振り返る勇気はない。",
           isWindy: false,
           options: [
             { text: "廊下へ戻る", next: "hallway" },
@@ -141,7 +154,10 @@
         },
         lookAtWindow: {
           name: "庭（自分の部屋の下）",
-          text: "窓の中に、こちらを覗く人影がある。…あれは、小さな頃の自分だ。家の中にいる時はあんなにうずくまっていたのに。",
+          dayText:
+            "窓の中に、こちらを覗く人影がある。…あれは、小さな頃の自分だ。",
+          eveningText:
+            "窓の向こうに黒い人影がへばりついている。目が合った気がした。",
           isWindy: true,
           hasShadow: false,
           options: [
@@ -151,13 +167,16 @@
         },
         veranda: {
           name: "母の部屋のベランダ",
-          text: "外に繋がっているはずなのに、開放感がない。物理的な風通しとは無関係な、固有の不快指数がここには設定されているようだ。",
+          dayText: "外に繋がっているはずなのに、開放感がない。",
+          eveningText:
+            "ここから飛び降りても、この夕闇からは逃げられないような錯覚に陥る。",
           isWindy: false,
           options: [{ text: "部屋の中へ引き返す", next: "mothersRoom" }],
         },
         windExperiment: {
           name: "自分の部屋（実験中）",
-          text: "…風が流れ込んできた。停滞していた空気がかき混ぜられ、『うずくまっていた自分』の形が少し崩れた気がする。",
+          dayText: "…風が流れ込んできた。停滞していた空気がかき混ぜられる。",
+          eveningText: "生ぬるい風が吹き込む。夕闇が部屋の中へ侵食してくる。",
           isWindy: true,
           options: [
             { text: "窓を閉める", next: "myRoom" },
@@ -166,13 +185,36 @@
         },
       };
 
+      let currentId = "outside";
+
+      function toggleTime() {
+        worldState.time = worldState.time === "daytime" ? "evening" : "daytime";
+        updateScene(currentId);
+      }
+
       function updateScene(id) {
+        currentId = id;
         const scene = registry[id];
         if (!scene) return;
 
-        // テキスト更新
-        document.getElementById("location-name").innerText = scene.name;
-        document.getElementById("scene-text").innerText = scene.text;
+        // 画面全体の色変え
+        const container = document.getElementById("game-container");
+        const body = document.body;
+
+        if (worldState.time === "evening") {
+          body.style.background = "#2a0a0a"; // どす黒い赤
+          container.style.background = "#1a0505";
+          document.getElementById("scene-text").innerText =
+            scene.eveningText + "\n\n（遠くで寺の鐘が鳴っている：ゴーン……）";
+        } else {
+          body.style.background = "#111";
+          container.style.background = "#222";
+          document.getElementById("scene-text").innerText = scene.dayText;
+        }
+
+        // 基本情報の更新
+        document.getElementById("location-name").innerText =
+          scene.name + (worldState.time === "evening" ? "（夕方）" : "（昼）");
 
         // 風の状態
         const windSpan = document.getElementById("wind-status");
@@ -181,13 +223,26 @@
 
         // 人影の観測ロジック
         const alert = document.getElementById("shadow-alert");
-        alert.innerText = scene.hasShadow
-          ? "！ 窓からこちらを覗く人影がある。"
-          : "";
+        alert.innerText =
+          scene.hasShadow && worldState.time === "evening"
+            ? "！ 窓にへばりつく影が、こちらを凝視している。"
+            : scene.hasShadow
+              ? "！ 窓からこちらを覗く人影がある。"
+              : "";
 
         // 選択肢の生成
         const choiceContainer = document.getElementById("choices");
         choiceContainer.innerHTML = "";
+
+        // 時間切替ボタン（常に表示）
+        const timeBtn = document.createElement("button");
+        timeBtn.innerText =
+          worldState.time === "daytime" ? "▷ 夕方へ変異させる" : "▷ 昼間に戻す";
+        timeBtn.style.background =
+          worldState.time === "daytime" ? "#4a2a2a" : "#2a4a4a";
+        timeBtn.onclick = toggleTime;
+        choiceContainer.appendChild(timeBtn);
+
         scene.options.forEach((opt) => {
           const btn = document.createElement("button");
           btn.innerText = opt.text;
@@ -195,17 +250,13 @@
           choiceContainer.appendChild(btn);
         });
 
-        // 演出
-        const container = document.getElementById("game-container");
+        // 固有演出（ベランダ等の色変え）
         if (id === "veranda") {
           container.style.borderColor = "#ff4444";
-          container.style.boxShadow = "0 0 20px rgba(255, 0, 0, 0.2)";
         } else if (id === "windExperiment") {
           container.style.borderColor = "#88ccff";
-          container.style.boxShadow = "0 0 20px rgba(136, 204, 255, 0.4)";
         } else {
           container.style.borderColor = "#444";
-          container.style.boxShadow = "none";
         }
       }
 
