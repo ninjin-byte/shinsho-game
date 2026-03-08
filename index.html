@@ -116,10 +116,20 @@
           isWindy: true,
           options: [
             { text: "洗面台の鏡を見る", next: "washstand" },
+            { text: "キッチンを覗く", next: "kitchen" }, // ←追加
             { text: "自分の部屋に入る", next: "myRoom" },
             { text: "母の部屋に入る", next: "mothersRoom" },
             { text: "玄関へ戻る", next: "entrance" },
           ],
+        },
+        kitchen: {
+          name: "キッチン",
+          dayText:
+            "祖母が静止している。家事の途中のような姿勢のまま、時間が止まっているようだ。",
+          eveningText:
+            "薄暗いキッチンに、祖母のシルエットが立っている。微動だにせず、ただそこに「配置」されている。",
+          isWindy: true,
+          options: [{ text: "廊下へ戻る", next: "hallway" }],
         },
         washstand: {
           name: "洗面台",
@@ -251,12 +261,17 @@
         });
 
         // 固有演出（ベランダ等の色変え）
+        // updateScene関数内の演出部分（if文のところ）に追加
         if (id === "veranda") {
           container.style.borderColor = "#ff4444";
         } else if (id === "windExperiment") {
           container.style.borderColor = "#88ccff";
+        } else if (id === "kitchen") {
+          container.style.borderColor = "#aaaaaa"; // 祖母の静寂（グレー）
+          container.style.boxShadow = "inset 0 0 20px rgba(255, 255, 255, 0.1)";
         } else {
           container.style.borderColor = "#444";
+          container.style.boxShadow = "none";
         }
       }
 
