@@ -101,10 +101,12 @@
         },
         myRoom: {
           name: "自分の部屋",
-          text: "ドアを閉めた瞬間、風が止まった。ここは隔離された閉鎖系だ。",
+          text: "風が止まっている。真空パックされた記憶の部屋。",
           isWindy: false,
-          hasShadow: false,
-          options: [{ text: "廊下へ戻る", next: "hallway" }],
+          options: [
+            { text: "廊下へ戻る", next: "hallway" },
+            { text: "窓を無理やりこじ開ける", next: "windExperiment" }, // ←実験開始！
+          ],
         },
         mothersRoom: {
           name: "母の部屋",
@@ -132,6 +134,15 @@
           isWindy: false,
           hasShadow: false,
           options: [{ text: "部屋の中へ引き返す", next: "mothersRoom" }],
+        },
+        windExperiment: {
+          name: "自分の部屋（実験中）",
+          text: "…風が流れ込んできた。停滞していた空気がかき混ぜられ、『うずくまっていた自分』の形が少し崩れた気がする。",
+          isWindy: true, // ここで風が吹く！
+          options: [
+            { text: "窓を閉める", next: "myRoom" },
+            { text: "開けたまま廊下へ出る", next: "hallway" },
+          ],
         },
       };
 
@@ -162,13 +173,16 @@
           btn.onclick = () => updateScene(opt.next);
           choiceContainer.appendChild(btn);
         });
-        // updateScene関数の中、下の方にこれを追加
+        // さっきの色のコードをこう書き換えます
         const container = document.getElementById("game-container");
         if (id === "veranda") {
-          container.style.borderColor = "#ff4444"; // 枠を赤く
-          container.style.boxShadow = "0 0 20px rgba(255, 0, 0, 0.2)"; // 赤い光
+          container.style.borderColor = "#ff4444";
+          container.style.boxShadow = "0 0 20px rgba(255, 0, 0, 0.2)";
+        } else if (id === "windExperiment") {
+          container.style.borderColor = "#88ccff"; // 風の青
+          container.style.boxShadow = "0 0 20px rgba(136, 204, 255, 0.4)"; // 風のゆらぎ
         } else {
-          container.style.borderColor = "#444"; // 通常の枠
+          container.style.borderColor = "#444";
           container.style.boxShadow = "none";
         }
       }
