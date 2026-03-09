@@ -79,9 +79,10 @@
 
     <script>
       let worldState = {
-        time: "daytime", // "daytime" か "evening"
+        time: "daytime",
         isSelfRecalled: false,
         mirrorClarity: "cloudy",
+        isTanukiFixed: false, // ←追加：たぬきが修正されたか
       };
 
       const registry = {
@@ -99,13 +100,33 @@
         },
         entrance: {
           name: "玄関",
-          dayText: "たぬきの置物が静止している。",
-          eveningText:
-            "たぬきの置物が噛みつこうとする敵意を見せている。静寂がダブって見える。",
+          updateText: () => {
+            if (worldState.isTanukiFixed) {
+              return "たぬきの置物が鎮座している。かつての敵意は消え、今はただの古い焼き物としてそこに『固定』されている。";
+            }
+            return worldState.time === "daytime"
+              ? "たぬきの置物が静止している。"
+              : "たぬきの置物が噛みつこうとする敵意を見せている。静寂と攻撃性がダブって見えるバグ状態だ。";
+          },
           isWindy: true,
           options: [
             { text: "無視して廊下へ（スルー）", next: "hallway" },
+            { text: "たぬきをじっくり観測する", next: "tanukiObservation" }, // ←追加
             { text: "外に出る", next: "outside" },
+          ],
+        },
+        tanukiObservation: {
+          name: "玄関（デバッグ中）",
+          text: "置物の細部をドライに観察する。これは過去の嫌な記憶がバグとして再生されているだけだ。実害はない「不変のバグ」だと確信する。",
+          isWindy: true,
+          options: [
+            {
+              text: "「ただの置物」だと納得する",
+              next: "entrance",
+              action: () => {
+                worldState.isTanukiFixed = true;
+              },
+            },
           ],
         },
         hallway: {
@@ -218,19 +239,30 @@
         const scene = registry[id];
         if (!scene) return;
 
+        // --- ここから追加・修正 ---
+        let displayText = "";
+        if (scene.updateText) {
+          displayText = scene.updateText(); // 動的なテキストを取得
+        } else {
+          displayText =
+            worldState.time === "evening" ? scene.eveningText : scene.dayText;
+        }
+        // --- ここまで ---
+
         // 画面全体の色変え
         const container = document.getElementById("game-container");
         const body = document.body;
 
         if (worldState.time === "evening") {
-          body.style.background = "#2a0a0a"; // どす黒い赤
+          body.style.background = "#2a0a0a";
           container.style.background = "#1a0505";
           document.getElementById("scene-text").innerText =
-            scene.eveningText + "\n\n（遠くで寺の鐘が鳴っている：ゴーン……）";
+            displayText +
+            (id !== "tanukiObservation" ? "\n\n（ゴーン……）" : "");
         } else {
           body.style.background = "#111";
           container.style.background = "#222";
-          document.getElementById("scene-text").innerText = scene.dayText;
+          document.getElementById("scene-text").innerText = displayText;
         }
 
         // 基本情報の更新
@@ -252,24 +284,28 @@
               : "";
 
         // 選択肢の生成
+        // ※ action を実行するコードをボタン生成の部分に足します
         const choiceContainer = document.getElementById("choices");
         choiceContainer.innerHTML = "";
 
-        // 時間切替ボタン（常に表示）
+        // 時間切替ボタン
         const timeBtn = document.createElement("button");
         timeBtn.innerText =
           worldState.time === "daytime" ? "▷ 夕方へ変異させる" : "▷ 昼間に戻す";
-        timeBtn.style.background =
-          worldState.time === "daytime" ? "#4a2a2a" : "#2a4a4a";
         timeBtn.onclick = toggleTime;
         choiceContainer.appendChild(timeBtn);
 
         scene.options.forEach((opt) => {
           const btn = document.createElement("button");
           btn.innerText = opt.text;
-          btn.onclick = () => updateScene(opt.next);
+          btn.onclick = () => {
+            if (opt.action) opt.action(); // ←アクション（フラグ更新）を実行
+            updateScene(opt.next);
+          };
           choiceContainer.appendChild(btn);
         });
+
+        // （以下、色の演出コードなど）
 
         // updateScene関数内の演出部分（if文のところ）に追加
         // updateScene関数内の演出部分（if文）を更新
