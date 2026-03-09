@@ -75,6 +75,25 @@
       <div id="scene-text"></div>
       <div id="shadow-alert"></div>
       <div id="choices"></div>
+      <hr style="border: 0; border-top: 1px dashed #444; margin: 20px 0" />
+      <div style="font-size: 0.8em; color: #666; margin-bottom: 5px">
+        Observation Log:
+      </div>
+      <div
+        id="log-container"
+        style="
+          height: 100px;
+          overflow-y: auto;
+          font-size: 0.85em;
+          color: #aaa;
+          background: #1a1a1a;
+          padding: 10px;
+          border-radius: 4px;
+        "
+      >
+        <div>観測を開始しました...</div>
+      </div>
+      <div id="choices"></div>
     </div>
 
     <script>
@@ -253,9 +272,20 @@
         updateScene(currentId);
       }
 
+      function addLog(text) {
+        const logContainer = document.getElementById("log-container");
+        const newEntry = document.createElement("div");
+        newEntry.innerText = `[${new Date().toLocaleTimeString()}] ${text}`;
+        logContainer.prepend(newEntry); // 新しいログを上に
+      }
+
       function updateScene(id) {
         currentId = id;
         const scene = registry[id];
+
+        // シーンに入ったときにログを出す
+        addLog(`${scene.name} に到達。環境をスキャン中...`);
+
         if (!scene) return;
 
         // --- ここを修正：優先順位をつけてテキストを取得 ---
@@ -323,7 +353,8 @@
           const btn = document.createElement("button");
           btn.innerText = opt.text;
           btn.onclick = () => {
-            if (opt.action) opt.action(); // ←アクション（フラグ更新）を実行
+            if (opt.action) opt.action();
+            addLog(`アクション: ${opt.text}`); // アクションをログに記録
             updateScene(opt.next);
           };
           choiceContainer.appendChild(btn);
