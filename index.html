@@ -239,15 +239,20 @@
         const scene = registry[id];
         if (!scene) return;
 
-        // --- ここから追加・修正 ---
+        // --- ここを修正：優先順位をつけてテキストを取得 ---
         let displayText = "";
         if (scene.updateText) {
-          displayText = scene.updateText(); // 動的なテキストを取得
+          displayText = scene.updateText(); // ① 動的な更新関数があれば実行
+        } else if (worldState.time === "evening" && scene.eveningText) {
+          displayText = scene.eveningText; // ② 夕方で夕方用テキストがあれば採用
+        } else if (worldState.time === "daytime" && scene.dayText) {
+          displayText = scene.dayText; // ③ 昼で昼用テキストがあれば採用
         } else {
-          displayText =
-            worldState.time === "evening" ? scene.eveningText : scene.dayText;
+          displayText = scene.text || ""; // ④ どれもなければ共通の text を採用
         }
-        // --- ここまで ---
+        // --- 修正ここまで ---
+
+        // (以下、背景色やボタン生成のコードはそのまま)
 
         // 画面全体の色変え
         const container = document.getElementById("game-container");
