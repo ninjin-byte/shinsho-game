@@ -87,16 +87,23 @@
 
       const registry = {
         outside: {
-          name: "家の外（安全圏）",
+          name: "家の外（敷地内）",
           dayText: "昼の光が降り注いでいる。建物は静かだ。",
           eveningText:
-            "赤みがかった黒い空。遠くで寺の鐘が鳴り、言い知れぬ不安が込み上げる。",
+            "赤みがかった黒い空。遠くで寺の鐘が鳴り、不安が込み上げる。",
           isWindy: true,
           hasShadow: true,
           options: [
             { text: "玄関から入る", next: "entrance" },
             { text: "自分の部屋の窓を見上げる", next: "lookAtWindow" },
+            { text: "敷地外の道路（安全圏）へ出る", next: "safeRoad" },
           ],
+        },
+        safeRoad: {
+          name: "敷地外の道路",
+          text: "実家から数メートル離れたアスファルト。ここは安全圏だ。どんな敵も、この境界線を越えて追ってくることはできない。",
+          isWindy: true,
+          options: [{ text: "家を振り返る", next: "outside" }],
         },
         entrance: {
           name: "玄関",
@@ -111,7 +118,7 @@
           isWindy: true,
           options: [
             { text: "無視して廊下へ（スルー）", next: "hallway" },
-            { text: "たぬきをじっくり観測する", next: "tanukiObservation" }, // ←追加
+            { text: "たぬきをじっくり観測する", next: "tanukiObservation" },
             { text: "外に出る", next: "outside" },
           ],
         },
@@ -137,7 +144,7 @@
           isWindy: true,
           options: [
             { text: "洗面台の鏡を見る", next: "washstand" },
-            { text: "キッチンを覗く", next: "kitchen" }, // ←追加
+            { text: "キッチンを覗く", next: "kitchen" },
             { text: "自分の部屋に入る", next: "myRoom" },
             { text: "母の部屋に入る", next: "mothersRoom" },
             { text: "玄関へ戻る", next: "entrance" },
@@ -146,9 +153,9 @@
         kitchen: {
           name: "キッチン",
           dayText:
-            "祖母が静止している。家事の途中のような姿勢のまま、時間が止まっているようだ。",
+            "祖母が静止している。家事の途中のまま、時間が止まっているようだ。",
           eveningText:
-            "薄暗いキッチンに、祖母のシルエットが立っている。微動だにせず、ただそこに「配置」されている。",
+            "薄暗いキッチンに、祖母のシルエットが立っている。ただそこに「配置」されている。",
           isWindy: true,
           options: [{ text: "廊下へ戻る", next: "hallway" }],
         },
@@ -162,37 +169,68 @@
         },
         myRoom: {
           name: "自分の部屋",
-          dayText:
-            "風が止まっている。後ろ向きでうずくまっている「自分」がいる。",
-          eveningText:
-            "無風の闇。モザイク状の「自分」の輪郭が、夕闇に溶けて混ざり合っている。",
+          updateText: () => {
+            return worldState.time === "daytime"
+              ? "後ろ向きで座る「小さな自分」がいる。顔にはデジタル・スクエア状のモザイクがかかっている。"
+              : "闇の中、後ろ向きの輪郭が夕闇に溶けている。ここには風が吹かない。";
+          },
           isWindy: false,
           options: [
             { text: "廊下へ戻る", next: "hallway" },
-            { text: "窓を無理やりこじ開ける", next: "windExperiment" },
+            { text: "窓・カーテン・鍵を全開にする", next: "experimentResult" },
+            { text: "モザイクの質感を観測する", next: "mosaicDetail" },
           ],
+        },
+        experimentResult: {
+          name: "自分の部屋（干渉実験）",
+          text: "窓を全開にしても、やはり風は吹かない。背後に強烈な圧力を感じて振り返ると、至近距離でこちらを覗き込む『小さな自分』の残像がある。\n…彼は再び、後ろ向きの安定状態へと戻った。",
+          isWindy: false,
+          options: [
+            { text: "今の状態を「安心」として受容する", next: "myRoom" },
+          ],
+        },
+        mosaicDetail: {
+          name: "自分の部屋（詳細観測）",
+          text: "モザイクは複雑に明滅している。これは自己防衛プロトコル。何か（自分自身の核）を守るための、不可侵の領域であることを示している。",
+          isWindy: false,
+          options: [{ text: "距離を保って離れる", next: "myRoom" }],
         },
         mothersRoom: {
           name: "母の部屋",
           dayText:
-            "特異点。風が吹かない。真空パックされたような当時の空気が漂っている。\n背中を向けてうずくまっている「母」がいる。微動だにしない。",
+            "特異点。真空パックされたような当時の空気が漂っている。背中を向けてうずくまっている「母」がいる。",
           eveningText:
-            "不快指数の極致。後ろ向きのシルエットから、かつて襲いかかってきた時の鋭い敵意が、残像のように滲み出している。",
+            "不快指数の極致。後ろ向きのシルエットから、かつての敵意が残像のように滲み出している。",
           isWindy: false,
           options: [
             { text: "廊下へ戻る", next: "hallway" },
             { text: "ベランダの窓に近づく", next: "veranda" },
-            { text: "母の背中を静かに観測する", next: "observeMother" }, // ←新しい分岐
+            { text: "母の背中を静かに観測する", next: "observeMother" },
           ],
         },
         observeMother: {
           name: "母の部屋（観測）",
           dayText:
-            "どれだけ見つめても、彼女は動かない。これは「過去のデータ」の再生に過ぎないのだと確信する。",
+            "どれだけ見つめても、彼女は動かない。これは「過去のデータ」の再生に過ぎないと確信する。",
           eveningText:
             "視線を逸らした瞬間に動き出すような錯覚。…いや、これは外部環境の「バグ」だ。自分起因ではない。",
           isWindy: false,
           options: [{ text: "思考を切り替えて部屋を出る", next: "hallway" }],
+        },
+        veranda: {
+          name: "母の部屋のベランダ",
+          text: "強い不快感が漂う場所。ここから瓦屋根を伝って道路へと脱出した記憶がある。あの時、敵は屋根から先へは追ってこれなかった。",
+          isWindy: false,
+          options: [
+            { text: "脱出ルート（瓦屋根）を視認する", next: "roofView" },
+            { text: "部屋の中へ引き返す", next: "mothersRoom" },
+          ],
+        },
+        roofView: {
+          name: "ベランダからの視界",
+          text: "瓦屋根が道路へと続いている。物理法則とは無関係な不快感はあるが、脱出経路としての機能は今も生きている。",
+          isWindy: false,
+          options: [{ text: "ベランダへ戻る", next: "veranda" }],
         },
         lookAtWindow: {
           name: "庭（自分の部屋の下）",
@@ -207,26 +245,7 @@
             { text: "そのまま外へ戻る", next: "outside" },
           ],
         },
-        veranda: {
-          name: "母の部屋のベランダ",
-          dayText: "外に繋がっているはずなのに、開放感がない。",
-          eveningText:
-            "ここから飛び降りても、この夕闇からは逃げられないような錯覚に陥る。",
-          isWindy: false,
-          options: [{ text: "部屋の中へ引き返す", next: "mothersRoom" }],
-        },
-        windExperiment: {
-          name: "自分の部屋（実験中）",
-          dayText: "…風が流れ込んできた。停滞していた空気がかき混ぜられる。",
-          eveningText: "生ぬるい風が吹き込む。夕闇が部屋の中へ侵食してくる。",
-          isWindy: true,
-          options: [
-            { text: "窓を閉める", next: "myRoom" },
-            { text: "開けたまま廊下へ出る", next: "hallway" },
-          ],
-        },
       };
-
       let currentId = "outside";
 
       function toggleTime() {
