@@ -2,7 +2,7 @@
 <html lang="ja">
   <head>
     <meta charset="UTF-8" />
-    <title>心象風景探索レジストリ v1.5</title>
+    <title>心象風景探索：マスターレジストリ v2.1 攻略版</title>
     <style>
       body {
         background: #111;
@@ -13,155 +13,156 @@
         align-items: center;
         height: 100vh;
         margin: 0;
+        overflow: hidden;
       }
       #game-container {
-        width: 80%;
-        max-width: 600px;
-        padding: 20px;
+        width: 85%;
+        max-width: 650px;
+        padding: 25px;
         border: 1px solid #444;
         background: #222;
-        border-radius: 8px;
+        border-radius: 12px;
         transition: 0.5s;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
       }
       #scene-text {
-        min-height: 100px;
-        line-height: 1.6;
+        min-height: 120px;
+        line-height: 1.7;
         margin-bottom: 20px;
-        font-size: 1.1em;
+        font-size: 1.05em;
         white-space: pre-wrap;
       }
       .status {
-        font-size: 0.8em;
+        font-size: 0.85em;
         color: #888;
         border-bottom: 1px solid #444;
-        padding-bottom: 10px;
+        padding-bottom: 12px;
         margin-bottom: 15px;
-      }
-      .windy {
-        color: #88ccff;
-        font-weight: bold;
-      }
-      .still {
-        color: #ff6666;
-        font-weight: bold;
+        display: flex;
+        justify-content: space-between;
       }
       button {
-        background: #333;
-        color: white;
+        background: #353535;
+        color: #eee;
         border: 1px solid #555;
-        padding: 10px 20px;
-        margin: 5px;
+        padding: 12px 18px;
+        margin: 6px;
         cursor: pointer;
-        transition: 0.3s;
+        border-radius: 4px;
+        transition: 0.2s;
+        font-size: 0.9em;
       }
       button:hover {
         background: #555;
-        border-color: #888;
+        border-color: #999;
+        transform: translateY(-1px);
       }
-      #shadow-alert {
-        color: #ff0000;
-        font-weight: bold;
-        margin-top: 10px;
-        height: 1.2em;
+      #log-container {
+        height: 120px;
+        overflow-y: auto;
+        font-size: 0.8em;
+        color: #888;
+        background: #151515;
+        padding: 10px;
+        border-radius: 6px;
+        border: 1px solid #333;
+        margin-top: 15px;
+      }
+      .log-entry {
+        margin-bottom: 4px;
+        border-left: 2px solid #444;
+        padding-left: 8px;
+      }
+      .windy {
+        color: #88ccff;
+      }
+      .still {
+        color: #ff6666;
       }
     </style>
   </head>
   <body>
     <div id="game-container">
       <div class="status">
-        現在地: <span id="location-name">-</span> | 環境条件:
-        <span id="wind-status">-</span>
+        <span>📍 <span id="location-name">-</span></span>
+        <span>🌬️ <span id="wind-status">-</span></span>
       </div>
       <div id="scene-text"></div>
-      <div id="shadow-alert"></div>
       <div id="choices"></div>
-      <hr style="border: 0; border-top: 1px dashed #444; margin: 20px 0" />
-      <div style="font-size: 0.8em; color: #666; margin-bottom: 5px">
-        Observation Log:
-      </div>
-      <div
-        id="log-container"
-        style="
-          height: 100px;
-          overflow-y: auto;
-          font-size: 0.85em;
-          color: #aaa;
-          background: #1a1a1a;
-          padding: 10px;
-          border-radius: 4px;
-        "
-      >
-        <div>観測を開始しました...</div>
-      </div>
-      <div id="choices"></div>
+      <div id="log-container"></div>
     </div>
 
     <script>
       let worldState = {
         time: "daytime",
-        isSelfRecalled: false,
-        mirrorClarity: "cloudy",
-        isTanukiFixed: false, // ←追加：たぬきが修正されたか
+        isTanukiFixed: false,
+        hasSeenEscapeRoute: false,
+        observedEntities: new Set(), // 観測したエンティティを記録
+        totalEntities: 4, // たぬき、祖母、母、自分
       };
 
       const registry = {
         outside: {
           name: "家の外（敷地内）",
-          dayText: "昼の光が降り注いでいる。建物は静かだ。",
-          eveningText:
-            "赤みがかった黒い空。遠くで寺の鐘が鳴り、不安が込み上げる。",
+          dayText: "昼の光。建物は静かだ。",
+          eveningText: "赤黒い空。寺の鐘が鳴り、不安が込み上げる。",
           isWindy: true,
-          hasShadow: true,
-          options: [
-            { text: "玄関から入る", next: "entrance" },
-            { text: "自分の部屋の窓を見上げる", next: "lookAtWindow" },
-            { text: "敷地外の道路（安全圏）へ出る", next: "safeRoad" },
-          ],
+          getOptions: () => {
+            let opts = [
+              { text: "玄関から入る", next: "entrance" },
+              { text: "自分の部屋の窓を見上げる", next: "lookAtWindow" },
+            ];
+            if (worldState.hasSeenEscapeRoute) {
+              opts.push({
+                text: "敷地外の道路（安全圏）へ脱出する",
+                next: "safeRoad",
+              });
+            }
+            return opts;
+          },
         },
         safeRoad: {
           name: "敷地外の道路",
-          text: "実家から数メートル離れたアスファルト。ここは安全圏だ。どんな敵も、この境界線を越えて追ってくることはできない。",
+          text: "実家から離れたアスファルト。ここは完全な安全圏だ。どんな敵も境界線を越えては来られない。",
           isWindy: true,
-          options: [{ text: "家を振り返る", next: "outside" }],
+          getOptions: () => [{ text: "敷地内へ戻る", next: "outside" }],
         },
         entrance: {
           name: "玄関",
-          updateText: () => {
-            if (worldState.isTanukiFixed) {
-              return "たぬきの置物が鎮座している。かつての敵意は消え、今はただの古い焼き物としてそこに『固定』されている。";
-            }
-            return worldState.time === "daytime"
-              ? "たぬきの置物が静止している。"
-              : "たぬきの置物が噛みつこうとする敵意を見せている。静寂と攻撃性がダブって見えるバグ状態だ。";
-          },
+          updateText: () =>
+            worldState.isTanukiFixed
+              ? "たぬきは「ただの置物」として固定されている。"
+              : worldState.time === "daytime"
+                ? "たぬきが静止している。"
+                : "たぬきの敵意がバグのようにダブって見える。",
           isWindy: true,
-          options: [
-            { text: "無視して廊下へ（スルー）", next: "hallway" },
+          getOptions: () => [
+            { text: "廊下へ進む", next: "hallway" },
             { text: "たぬきをじっくり観測する", next: "tanukiObservation" },
             { text: "外に出る", next: "outside" },
           ],
         },
         tanukiObservation: {
-          name: "玄関（デバッグ中）",
-          text: "置物の細部をドライに観察する。これは過去の嫌な記憶がバグとして再生されているだけだ。実害はない「不変のバグ」だと確信する。",
+          name: "玄関（観測）",
+          text: "これは過去の記憶が再生されているだけのバグだ。実害はないと確信する。",
           isWindy: true,
-          options: [
+          getOptions: () => [
             {
               text: "「ただの置物」だと納得する",
               next: "entrance",
               action: () => {
                 worldState.isTanukiFixed = true;
+                markObserved("たぬき");
               },
             },
           ],
         },
         hallway: {
           name: "廊下",
-          dayText: "光が通り抜けていくのを感じる。風通しが良い。",
-          eveningText:
-            "影が長く伸びている。光の通り道が、今は闇の通り道になっている。",
+          dayText: "光が通り抜け、風通しが良い。",
+          eveningText: "影が長く伸び、闇の通り道になっている。",
           isWindy: true,
-          options: [
+          getOptions: () => [
             { text: "洗面台の鏡を見る", next: "washstand" },
             { text: "キッチンを覗く", next: "kitchen" },
             { text: "自分の部屋に入る", next: "myRoom" },
@@ -171,217 +172,191 @@
         },
         kitchen: {
           name: "キッチン",
-          dayText:
-            "祖母が静止している。家事の途中のまま、時間が止まっているようだ。",
-          eveningText:
-            "薄暗いキッチンに、祖母のシルエットが立っている。ただそこに「配置」されている。",
+          text: "祖母が家事の途中のままフリーズしている。時間が止まった背景オブジェクトだ。",
           isWindy: true,
-          options: [{ text: "廊下へ戻る", next: "hallway" }],
+          getOptions: () => [
+            {
+              text: "廊下へ戻る",
+              next: "hallway",
+              action: () => markObserved("祖母"),
+            },
+          ],
         },
         washstand: {
           name: "洗面台",
-          dayText: "鏡はグレーに濁り、シルエットがうっすら映る程度だ。",
-          eveningText:
-            "鏡面はほぼ黒い。覗き込むほど、思考の深淵に引きずり込まれそうだ。",
+          dayText:
+            "鏡はグレーに濁り、シルエットがうっすら映る。見づらさが安心材料だ。",
+          eveningText: "鏡面はほぼ黒い。深淵を覗くような感覚。",
           isWindy: true,
-          options: [{ text: "鏡から目をそらす", next: "hallway" }],
+          getOptions: () => [{ text: "鏡から目をそらす", next: "hallway" }],
         },
         myRoom: {
           name: "自分の部屋",
-          updateText: () => {
-            return worldState.time === "daytime"
-              ? "後ろ向きで座る「小さな自分」がいる。顔にはデジタル・スクエア状のモザイクがかかっている。"
-              : "闇の中、後ろ向きの輪郭が夕闇に溶けている。ここには風が吹かない。";
-          },
+          updateText: () =>
+            "後ろ向きで座る「小さな自分」がいる。顔にはモザイク。ここは風が吹かない。",
           isWindy: false,
-          options: [
+          getOptions: () => [
             { text: "廊下へ戻る", next: "hallway" },
-            { text: "窓・カーテン・鍵を全開にする", next: "experimentResult" },
-            { text: "モザイクの質感を観測する", next: "mosaicDetail" },
+            {
+              text: "窓・カーテンを全開にする（実験）",
+              next: "experimentResult",
+            },
+            { text: "モザイクを詳細観測する", next: "mosaicDetail" },
           ],
         },
         experimentResult: {
-          name: "自分の部屋（干渉実験）",
-          text: "窓を全開にしても、やはり風は吹かない。背後に強烈な圧力を感じて振り返ると、至近距離でこちらを覗き込む『小さな自分』の残像がある。\n…彼は再び、後ろ向きの安定状態へと戻った。",
+          name: "自分の部屋（実験）",
+          text: "全開にしても風は吹かない。背後に圧力を感じ振り返ると、至近距離で覗き込む残像。…彼は再び後ろ向きに戻った。",
           isWindy: false,
-          options: [
-            { text: "今の状態を「安心」として受容する", next: "myRoom" },
+          getOptions: () => [
+            { text: "この安定を「安心」として受容する", next: "myRoom" },
           ],
         },
         mosaicDetail: {
-          name: "自分の部屋（詳細観測）",
-          text: "モザイクは複雑に明滅している。これは自己防衛プロトコル。何か（自分自身の核）を守るための、不可侵の領域であることを示している。",
+          name: "自分の部屋（詳細）",
+          text: "複雑に明滅するモザイク。核を守る「自己防衛プロトコル」そのものだ。",
           isWindy: false,
-          options: [{ text: "距離を保って離れる", next: "myRoom" }],
+          getOptions: () => [
+            {
+              text: "離れる",
+              next: "myRoom",
+              action: () => markObserved("小さな自分"),
+            },
+          ],
         },
         mothersRoom: {
           name: "母の部屋",
-          dayText:
-            "特異点。真空パックされたような当時の空気が漂っている。背中を向けてうずくまっている「母」がいる。",
-          eveningText:
-            "不快指数の極致。後ろ向きのシルエットから、かつての敵意が残像のように滲み出している。",
+          dayText: "特異点。無風。背中を向けてうずくまる母がいる。",
+          eveningText: "不快指数の極致。かつての敵意が残像のように滲む。",
           isWindy: false,
-          options: [
+          getOptions: () => [
             { text: "廊下へ戻る", next: "hallway" },
-            { text: "ベランダの窓に近づく", next: "veranda" },
-            { text: "母の背中を静かに観測する", next: "observeMother" },
+            { text: "ベランダに近づく", next: "veranda" },
+            { text: "母の背中を観測する", next: "observeMother" },
           ],
         },
         observeMother: {
           name: "母の部屋（観測）",
-          dayText:
-            "どれだけ見つめても、彼女は動かない。これは「過去のデータ」の再生に過ぎないと確信する。",
-          eveningText:
-            "視線を逸らした瞬間に動き出すような錯覚。…いや、これは外部環境の「バグ」だ。自分起因ではない。",
+          text: "彼女は動かない。これは過去データの再生に過ぎないバグだ。",
           isWindy: false,
-          options: [{ text: "思考を切り替えて部屋を出る", next: "hallway" }],
+          getOptions: () => [
+            {
+              text: "部屋を出る",
+              next: "hallway",
+              action: () => markObserved("母"),
+            },
+          ],
         },
         veranda: {
           name: "母の部屋のベランダ",
-          text: "強い不快感が漂う場所。ここから瓦屋根を伝って道路へと脱出した記憶がある。あの時、敵は屋根から先へは追ってこれなかった。",
+          text: "強い不快感。ここから瓦屋根を伝って脱出した記憶がある。",
           isWindy: false,
-          options: [
+          getOptions: () => [
             { text: "脱出ルート（瓦屋根）を視認する", next: "roofView" },
-            { text: "部屋の中へ引き返す", next: "mothersRoom" },
+            { text: "部屋へ引き返す", next: "mothersRoom" },
           ],
         },
         roofView: {
-          name: "ベランダからの視界",
-          text: "瓦屋根が道路へと続いている。物理法則とは無関係な不快感はあるが、脱出経路としての機能は今も生きている。",
+          name: "ベランダ（脱出路）",
+          text: "瓦屋根が道路へ続く。ここは敵が追ってこれない「確かな事実」だ。",
           isWindy: false,
-          options: [{ text: "ベランダへ戻る", next: "veranda" }],
-        },
-        lookAtWindow: {
-          name: "庭（自分の部屋の下）",
-          dayText:
-            "窓の中に、こちらを覗く人影がある。…あれは、小さな頃の自分だ。",
-          eveningText:
-            "窓の向こうに黒い人影がへばりついている。目が合った気がした。",
-          isWindy: true,
-          hasShadow: false,
-          options: [
-            { text: "玄関へ向かう", next: "entrance" },
-            { text: "そのまま外へ戻る", next: "outside" },
+          getOptions: () => [
+            {
+              text: "納得して戻る",
+              next: "veranda",
+              action: () => {
+                if (!worldState.hasSeenEscapeRoute) {
+                  worldState.hasSeenEscapeRoute = true;
+                  addLog(
+                    "🔑 攻略情報：脱出ルートを確定。道路へのアクセスが解禁されました。",
+                  );
+                }
+              },
+            },
           ],
         },
+        lookAtWindow: {
+          name: "庭（窓の下）",
+          text: "窓から「小さな自分」がこちらを見つめ返してくる。視線が同期している。",
+          isWindy: true,
+          getOptions: () => [{ text: "戻る", next: "outside" }],
+        },
       };
-      let currentId = "outside";
 
-      function toggleTime() {
-        worldState.time = worldState.time === "daytime" ? "evening" : "daytime";
-        updateScene(currentId);
+      function addLog(msg) {
+        const log = document.getElementById("log-container");
+        const entry = document.createElement("div");
+        entry.className = "log-entry";
+        entry.innerText = `> ${msg}`;
+        log.prepend(entry);
       }
 
-      function addLog(text) {
-        const logContainer = document.getElementById("log-container");
-        const newEntry = document.createElement("div");
-        newEntry.innerText = `[${new Date().toLocaleTimeString()}] ${text}`;
-        logContainer.prepend(newEntry); // 新しいログを上に
+      function markObserved(name) {
+        if (!worldState.observedEntities.has(name)) {
+          worldState.observedEntities.add(name);
+          addLog(
+            `✅ 観測完了: ${name} (${worldState.observedEntities.size}/${worldState.totalEntities})`,
+          );
+          if (worldState.observedEntities.size === worldState.totalEntities) {
+            addLog("🎊 全システムの構造把握を完了。外部化に成功しました。");
+          }
+        }
       }
 
       function updateScene(id) {
-        currentId = id;
         const scene = registry[id];
-
-        // シーンに入ったときにログを出す
-        addLog(`${scene.name} に到達。環境をスキャン中...`);
-
         if (!scene) return;
 
-        // --- ここを修正：優先順位をつけてテキストを取得 ---
-        let displayText = "";
-        if (scene.updateText) {
-          displayText = scene.updateText(); // ① 動的な更新関数があれば実行
-        } else if (worldState.time === "evening" && scene.eveningText) {
-          displayText = scene.eveningText; // ② 夕方で夕方用テキストがあれば採用
-        } else if (worldState.time === "daytime" && scene.dayText) {
-          displayText = scene.dayText; // ③ 昼で昼用テキストがあれば採用
-        } else {
-          displayText = scene.text || ""; // ④ どれもなければ共通の text を採用
-        }
-        // --- 修正ここまで ---
-
-        // (以下、背景色やボタン生成のコードはそのまま)
-
-        // 画面全体の色変え
-        const container = document.getElementById("game-container");
-        const body = document.body;
-
-        if (worldState.time === "evening") {
-          body.style.background = "#2a0a0a";
-          container.style.background = "#1a0505";
-          document.getElementById("scene-text").innerText =
-            displayText +
-            (id !== "tanukiObservation" ? "\n\n（ゴーン……）" : "");
-        } else {
-          body.style.background = "#111";
-          container.style.background = "#222";
-          document.getElementById("scene-text").innerText = displayText;
-        }
-
-        // 基本情報の更新
+        let text = scene.updateText
+          ? scene.updateText()
+          : worldState.time === "evening"
+            ? scene.eveningText || scene.text
+            : scene.dayText || scene.text;
+        document.getElementById("scene-text").innerText = text;
         document.getElementById("location-name").innerText =
-          scene.name + (worldState.time === "evening" ? "（夕方）" : "（昼）");
+          scene.name + (worldState.time === "evening" ? " (夕方)" : " (昼)");
 
-        // 風の状態
-        const windSpan = document.getElementById("wind-status");
-        windSpan.innerText = scene.isWindy ? "風通し良好" : "無風（隔離）";
-        windSpan.className = scene.isWindy ? "windy" : "still";
+        const wind = document.getElementById("wind-status");
+        wind.innerText = scene.isWindy ? "風通し良好" : "無風（隔離）";
+        wind.className = scene.isWindy ? "windy" : "still";
 
-        // 人影の観測ロジック
-        const alert = document.getElementById("shadow-alert");
-        alert.innerText =
-          scene.hasShadow && worldState.time === "evening"
-            ? "！ 窓にへばりつく影が、こちらを凝視している。"
-            : scene.hasShadow
-              ? "！ 窓からこちらを覗く人影がある。"
-              : "";
+        const container = document.getElementById("game-container");
+        container.style.borderColor =
+          id.includes("mothersRoom") || id.includes("veranda")
+            ? "#ff4444"
+            : "#444";
+        document.body.style.background =
+          worldState.time === "evening" ? "#2a0a0a" : "#111";
 
-        // 選択肢の生成
-        // ※ action を実行するコードをボタン生成の部分に足します
         const choiceContainer = document.getElementById("choices");
         choiceContainer.innerHTML = "";
 
-        // 時間切替ボタン
+        // 時間変更ボタン
         const timeBtn = document.createElement("button");
         timeBtn.innerText =
-          worldState.time === "daytime" ? "▷ 夕方へ変異させる" : "▷ 昼間に戻す";
-        timeBtn.onclick = toggleTime;
+          worldState.time === "daytime" ? "▷ 夕方へ変異" : "▷ 昼に戻す";
+        timeBtn.onclick = () => {
+          worldState.time =
+            worldState.time === "daytime" ? "evening" : "daytime";
+          addLog(`環境変異: ${worldState.time}`);
+          updateScene(id);
+        };
         choiceContainer.appendChild(timeBtn);
 
-        scene.options.forEach((opt) => {
+        // 各種選択肢
+        const options = scene.getOptions();
+        options.forEach((opt) => {
           const btn = document.createElement("button");
           btn.innerText = opt.text;
           btn.onclick = () => {
             if (opt.action) opt.action();
-            addLog(`アクション: ${opt.text}`); // アクションをログに記録
             updateScene(opt.next);
           };
           choiceContainer.appendChild(btn);
         });
-
-        // （以下、色の演出コードなど）
-
-        // updateScene関数内の演出部分（if文のところ）に追加
-        // updateScene関数内の演出部分（if文）を更新
-        if (
-          id === "veranda" ||
-          id === "mothersRoom" ||
-          id === "observeMother"
-        ) {
-          container.style.borderColor = "#ff4444"; // 警告の赤
-          container.style.boxShadow = "0 0 25px rgba(255, 0, 0, 0.3)";
-        } else if (id === "windExperiment") {
-          container.style.borderColor = "#88ccff";
-        } else if (id === "kitchen") {
-          container.style.borderColor = "#aaaaaa";
-        } else {
-          container.style.borderColor = "#444";
-          container.style.boxShadow = "none";
-        }
       }
 
-      // 初期起動
+      addLog("心象風景レジストリ v2.1 起動...");
       updateScene("outside");
     </script>
   </body>
